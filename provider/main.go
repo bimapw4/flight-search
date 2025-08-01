@@ -4,6 +4,7 @@ import (
 	"context"
 	"flight-api-provider/bootstrap"
 	"flight-api-provider/internal/business"
+	"flight-api-provider/internal/consumer"
 	"flight-api-provider/internal/handlers"
 	"flight-api-provider/internal/routes"
 	"fmt"
@@ -45,6 +46,9 @@ func main() {
 	business := business.NewBusiness(rdb)
 	handler := handlers.NewHandler(business)
 	// middleware := middleware.NewAuthentication(business)
+
+	consumer := consumer.NewConsumer(rdb, &business)
+	consumer.Run(context.Background())
 
 	routes.Routes(app, handler)
 
