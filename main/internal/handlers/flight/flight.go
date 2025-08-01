@@ -2,7 +2,6 @@ package flight
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"flight-api/internal/business"
 	"flight-api/internal/entity"
@@ -60,28 +59,58 @@ func (h *handler) SSEFlightStream(c *fiber.Ctx) error {
 	}
 
 	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 		lastID := "0"
+		ctx := c.Context()
 
-		ctx, _ := context.WithTimeout(c.Context(), 5*time.Second)
+		timeout := time.NewTimer(10 * time.Second) // ⏳ batas waktu
+		defer timeout.Stop()
+
+		foundAny := false
 
 		for {
-			streams, err := h.rdb.XRead(ctx, &redis.XReadArgs{
-				Streams: []string{"flight.search.results", lastID},
-				Block:   5 * time.Second,
-			}).Result()
+			select {
+			case <-ctx.Done():
+				log.Printf("🔌 SSE disconnected for search_id=%s", searchID)
+				return
+			case <-timeout.C:
+				if !foundAny {
+					log.Printf("Timeout: search_id %s not found", searchID)
+					errResp := map[string]interface{}{
+						"error":     "search_id not found",
+						"search_id": searchID,
+					}
+					b, _ := json.Marshal(errResp)
+					fmt.Fprintf(w, "data: %s\n\n", b)
+					w.Flush()
+				}
+				return
+			default:
+				streams, err := h.rdb.XRead(ctx, &redis.XReadArgs{
+					Streams: []string{"flight.search.results", lastID},
+					Block:   5 * time.Second,
+				}).Result()
 
-			if err != nil && err != redis.Nil {
-				continue
-			}
+				if err != nil && err != redis.Nil {
+					continue
+				}
 
-			for _, stream := range streams {
-				for _, msg := range stream.Messages {
-					lastID = msg.ID
-					if val, ok := msg.Values["search_id"]; ok && val == searchID {
-						data, _ := json.Marshal(msg.Values)
-						fmt.Fprintf(w, "data: %s\n\n", data)
-						w.Flush()
+				for _, stream := range streams {
+					for _, msg := range stream.Messages {
+						lastID = msg.ID
+						if raw, ok := msg.Values["search_id"]; ok {
+							if val, ok := raw.(string); ok && val == searchID {
+
+								foundAny = true
+
+								data, _ := json.Marshal(msg.Values)
+								fmt.Fprintf(w, "data: %s\n\n", data)
+								w.Flush()
+							}
+						}
 					}
 				}
 			}
