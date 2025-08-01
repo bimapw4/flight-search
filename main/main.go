@@ -31,18 +31,19 @@ func main() {
 	// db := bootstrap.ConnectDB()
 	// bootstrap.RunMigrations(db)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	rdb := bootstrap.InitRedis(ctx)
+
 	app.Use(requestid.New())
 
 	// providercfg := bootstrap.Provider()
 	// provider := provider.NewProvider(providercfg)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	rdb := bootstrap.InitRedis(ctx)
 	// repo := repositories.NewRepository(db)
 	business := business.NewBusiness(rdb)
-	handler := handlers.NewHandler(business)
+	handler := handlers.NewHandler(business, rdb)
 	// middleware := middleware.NewAuthentication(business)
 
 	routes.Routes(app, handler)
