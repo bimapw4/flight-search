@@ -35,6 +35,16 @@ func main() {
 	// db := bootstrap.ConnectDB()
 	// bootstrap.RunMigrations(db)
 
+	shutdownMetrics, err := bootstrap.InitMeterProvider(ctx, "main-service", app)
+	if err != nil {
+		log.Fatalf("failed to init OTel metrics: %v", err)
+	}
+	defer func() {
+		if err := shutdownMetrics(ctx); err != nil {
+			log.Printf("failed to shutdown meter provider: %v", err)
+		}
+	}()
+
 	rdb := bootstrap.InitRedis(ctx)
 	defer func() {
 		log.Println("Redis Close")
