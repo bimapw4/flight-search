@@ -56,12 +56,12 @@ func main() {
 	// middleware := middleware.NewAuthentication(business)
 
 	consumer := consumer.NewConsumer(rdb, &business)
-	consumer.Run(context.Background())
+	go consumer.Run(ctx)
 
 	routes.Routes(app, handler)
 
 	go func() {
-		port := ":3000"
+		port := ":3001"
 		if os.Getenv("PORT") != "" {
 			port = fmt.Sprintf(":%v", os.Getenv("PORT"))
 		}
