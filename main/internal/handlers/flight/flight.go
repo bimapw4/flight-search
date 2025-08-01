@@ -39,12 +39,23 @@ func (h *handler) PostSearchFlight(c *fiber.Ctx) error {
 	var input entity.FlightSearchInput
 	if err := c.BodyParser(&input); err != nil {
 		log.Println(err)
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid body"})
+		return response.NewResponse(Entity).
+			Errors("Search request submitted", "Invalid body").
+			JSON(c, fiber.StatusUnprocessableEntity)
+	}
+
+	if err := input.Validation(); err != nil {
+		log.Println(err)
+		return response.NewResponse(Entity).
+			Errors("Search request submitted", err).
+			JSON(c, fiber.StatusUnprocessableEntity)
 	}
 
 	res, err := h.business.Flight.PublishSearch(c.UserContext(), input)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to publish to stream"})
+		return response.NewResponse(Entity).
+			Errors("Search request submitted", "Failed to publish to stream").
+			JSON(c, fiber.StatusInternalServerError)
 	}
 
 	return response.NewResponse(Entity).
