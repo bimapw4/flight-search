@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  main-service:
+    build:
+      context: ./main      
+      dockerfile: Dockerfile
+    container_name: main-service
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    command: ["./flight-api"]
+
+  provider-service:
+    build:
+      context: ./provider
+      dockerfile: Dockerfile
+    container_name: provider-service
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    command: ["./flight-api-provider"]
