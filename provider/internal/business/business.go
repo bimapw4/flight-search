@@ -1,12 +1,17 @@
 package business
 
 import (
-	"flight-api-provider/internal/repositories"
+	flightprocessor "flight-api-provider/internal/business/flightProcessor"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type Business struct {
+	Flightprocessor flightprocessor.FlightProcessor
 }
 
-func NewBusiness(repo *repositories.Repository) Business {
-	return Business{}
+func NewBusiness(rdb *redis.Client) Business {
+	return Business{
+		Flightprocessor: flightprocessor.NewFlightProcessor(rdb),
+	}
 }
