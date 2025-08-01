@@ -10,6 +10,8 @@ import (
 	"log"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
 )
@@ -64,9 +66,20 @@ func (h *handler) PostSearchFlight(c *fiber.Ctx) error {
 }
 
 func (h *handler) SSEFlightStream(c *fiber.Ctx) error {
+	var (
+		Entity = "StreamFlight"
+	)
 	searchID := c.Params("search_id")
 	if searchID == "" {
-		return c.Status(400).SendString("Missing search_id")
+		return response.NewResponse(Entity).
+			Errors("Search request submitted", "Missing search_id").
+			JSON(c, fiber.StatusBadRequest)
+	}
+
+	if err := validation.Validate(searchID, is.UUID); err != nil {
+		return response.NewResponse(Entity).
+			Errors("Search request submitted", fmt.Sprint("search_id", err.Error())).
+			JSON(c, fiber.StatusBadRequest)
 	}
 
 	c.Set("Content-Type", "text/event-stream")
