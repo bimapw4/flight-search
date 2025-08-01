@@ -9,6 +9,31 @@ An event-driven flight search system using Redis Streams, Fiber, and OpenTelemet
 - **Prometheus**
 - **Docker Compose**
 
+## 📂 main/
+This is the core API service exposed to clients. Responsibilities include:
+
+* Accepting flight search requests ```(POST /api/flights/search)```
+
+* Streaming flight results in real-time via Server-Sent Events ```(GET /api/flights/search/:id/stream)```
+
+* Writing search requests into Redis Streams
+
+* Reading results from Redis to push to client
+
+* Exposing observability metrics (/metrics)
+
+
+## 📂 provider/
+This is the mock provider service that simulates integration with an external airline API. It:
+
+* Listens to the flight.search.requested Redis Stream
+
+* Matches mock flight data (sample.json) based on request criteria
+
+* Pushes individual results to the flight.search.results stream
+
+* Sends metadata (e.g., status: completed, total_results) to signal completion
+
 
 ## 🚀 Feature
 
