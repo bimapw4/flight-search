@@ -33,7 +33,7 @@ Redis, Fiber, and consumer will be shutdown clearly
     - enter the env file to connect to redis and the port
 5. cd ..
     - enter the env file to connect to redis
-6. docker compose up --build
+6. docker compose up -d
 ```
 
 ### 2. Running Manual
