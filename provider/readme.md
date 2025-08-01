@@ -86,4 +86,8 @@ DB_PORT =
 
 JWT_SECRET_KEY = 
 JWT_LIFESPAN = 
+
+REDIS_ADDR = localhost:6379
+REDIS_PASS = 
+REDIS_DB = 0
 ```
