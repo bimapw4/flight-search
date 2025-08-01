@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -17,6 +18,9 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// Default config
 	app := fiber.New(fiber.Config{
 		CaseSensitive: true,
@@ -31,10 +35,11 @@ func main() {
 	// db := bootstrap.ConnectDB()
 	// bootstrap.RunMigrations(db)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
 	rdb := bootstrap.InitRedis(ctx)
+	defer func() {
+		log.Println("Redis Close")
+		_ = rdb.Close()
+	}()
 
 	app.Use(requestid.New())
 
@@ -48,10 +53,20 @@ func main() {
 
 	routes.Routes(app, handler)
 
-	port := ":3000"
-	if os.Getenv("PORT") != "" {
-		port = fmt.Sprintf(":%v", os.Getenv("PORT"))
-	}
+	go func() {
+		port := ":3000"
+		if os.Getenv("PORT") != "" {
+			port = fmt.Sprintf(":%v", os.Getenv("PORT"))
+		}
+		log.Println(app.Listen(port))
+	}()
 
-	log.Println(app.Listen(port))
+	<-ctx.Done()
+	log.Println("Shutting down gracefully...")
+
+	if err := app.Shutdown(); err != nil {
+		log.Printf("Fiber shutdown error: %v", err)
+	} else {
+		log.Println("Fiber shutdown complete")
+	}
 }
